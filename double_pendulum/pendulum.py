@@ -29,13 +29,17 @@ class Pendulum(ABC):
     def x(self) -> float:
         pass
 
+    @abstractmethod
+    def calculate_new_x(self) -> float:
+        pass
+
     @property
     @abstractmethod
     def y(self) -> float:
         pass
 
     @abstractmethod
-    def update_y(self):
+    def calculate_new_y(self) -> float:
         pass
 
     @property
@@ -48,6 +52,10 @@ class Pendulum(ABC):
     def angle(self) -> float:
         pass
 
+    @abstractmethod
+    def update_angle(self) -> float:
+        pass
+
     @property
     @abstractmethod
     def acceleration(self) -> float:
@@ -56,6 +64,10 @@ class Pendulum(ABC):
     @property
     @abstractmethod
     def velocity(self) -> float:
+        pass
+
+    @abstractmethod
+    def update_velocity(self) -> float:
         pass
 
     @abstractmethod
@@ -103,6 +115,14 @@ class DoublePendulum(Pendulum):
     def x(self, new_x: float):
         self._x = new_x
 
+    def calculate_new_x(self, offset: int = None, pendulum: Pendulum = None):
+        if pendulum is not None:
+            self.x = pendulum.x + self.length * math.sin(self.angle)
+        else:
+            self.x = self.length * math.sin(self.angle) + offset
+
+        return self.x
+
     @property
     def y(self) -> float:
         return self._y
@@ -110,6 +130,14 @@ class DoublePendulum(Pendulum):
     @y.setter
     def y(self, new_y: float):
         self._y = new_y
+
+    def calculate_new_y(self, offset: int = None, pendulum: Pendulum = None) -> float:
+        if pendulum is not None:
+            self.y = pendulum.y + self.length * math.cos(self.angle)
+        else:
+            self.y = self.length * math.cos(self.angle) + offset
+
+        return self.y
 
     @property
     def get_coords(self):
@@ -120,6 +148,11 @@ class DoublePendulum(Pendulum):
     @property
     def angle(self) -> float:
         return self._angle
+
+    def update_angle(self) -> float:
+        self.angle += self.velocity
+
+        return self.angle
 
     @angle.setter
     def angle(self, new_angle: float):
@@ -140,6 +173,11 @@ class DoublePendulum(Pendulum):
     @velocity.setter
     def velocity(self, vel: float):
         self._velocity = vel
+
+    def update_velocity(self) -> float:
+        self.velocity += self.acceleration
+
+        return self.velocity
 
     def draw_rod(self, surface: pygame.display, origin: list, end: list):
         pygame.draw.line(surface, self.rod_color, origin, end, 2)
@@ -188,3 +226,14 @@ class DoublePendulum(Pendulum):
         self.acceleration = (equation_1 * (equation_2 + equation_3 + equation_4)) / denominator_2
 
         return self.acceleration
+
+    def get_data(self, pendulum_property):
+        self_attributes = dir(self)
+
+        if pendulum_property not in self_attributes:
+            return f'Attribute {pendulum_property} is not a member of {self.__class__.__name__}'
+
+        data = ''.join('Pendulum {property} value is: {property_value:.2f}'
+                       .format(property=pendulum_property, property_value=getattr(self, pendulum_property)))
+
+        return data
