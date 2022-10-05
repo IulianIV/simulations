@@ -1,6 +1,6 @@
 import pygame
 import math
-from pendulum import Pendulum, PI
+from pendulum import DoublePendulum, PI
 from utils import SCREEN_SIZE, BLACK, RED, GRAVITY, WHITE, CENTER_WIDTH, Y_OFFSET
 
 pygame.init()
@@ -10,53 +10,60 @@ trace_screen = pygame.display.set_mode(SCREEN_SIZE)
 
 pygame.display.set_caption("Double pendulum")
 
-done = False
-
 clock = pygame.time.Clock()
 
-p1 = Pendulum(BLACK, RED, 200, 20, 10, PI / 8)
-p2 = Pendulum(BLACK, RED, 200, 20, 10, PI)
+p1 = DoublePendulum(BLACK, RED, 200, 20, 10, PI / 2)
+p2 = DoublePendulum(BLACK, RED, 100, 30, 5, PI / 8)
 
-while not done:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            done = True
 
-    screen.fill(WHITE)
-    trace_screen.fill(WHITE)
+"""
+==== Configurations leading to OverflowError ====
 
-    sub_eq1_1: float = - GRAVITY * ((2 * p1.mass) + p2.mass) * math.sin(p1.angle)
-    sub_eq1_2: float = p2.mass * GRAVITY * math.sin(p1.angle - (2 * p2.angle))
-    sub_eq1_3: float = 2 * math.sin(p1.angle - p2.angle) * p2.mass
-    sub_eq1_4: float = ((p2.velocity**2 * p2.length) + (p1.velocity**2 * p1.length * math.cos(p1.angle - p2.angle)))
-    denominator_1: float = p1.length * ((2 * p1.mass) + p2.mass - p2.mass * math.cos((2 * p1.angle) - (2 * p2.angle)))
+p1 = DoublePendulum(BLACK, RED, 200, 20, 10, PI / 2)
+p2 = DoublePendulum(BLACK, RED, 100, 30, 5, PI / 8)
 
-    p1.acceleration = (sub_eq1_1 - sub_eq1_2 - sub_eq1_3 * sub_eq1_4) / denominator_1
+"""
 
-    sub_eq2_1: float = 2 * math.sin(p1.angle - p2.angle)
-    sub_eq2_2: float = (p1.velocity**2 * p1.length * (p1.mass + p2.mass))
-    sub_eq2_3: float = GRAVITY * (p1.mass + p2.mass) * math.cos(p1.angle)
-    sub_eq2_4: float = p2.velocity**2 * p2.length * p2.mass * math.cos(p1.angle - p2.angle)
-    denominator_2: float = p2.length * (2 * p1.mass + p2.mass - p2.mass * math.cos(2 * p1.angle - 2 * p2.angle))
 
-    p2.acceleration = (sub_eq2_1 * (sub_eq2_2 + sub_eq2_3 + sub_eq2_4)) / denominator_2
+def run_pendulum():
+    done = False
 
-    p1.x = p1.length * math.sin(p1.angle) + CENTER_WIDTH
-    p1.y = p1.length * math.cos(p1.angle) + Y_OFFSET
+    while not done:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                done = True
 
-    p2.x = p1.x + p2.length * math.sin(p2.angle)
-    p2.y = p1.y + p2.length * math.cos(p2.angle)
+        screen.fill(WHITE)
+        trace_screen.fill(WHITE)
 
-    p1.draw(screen, [CENTER_WIDTH, Y_OFFSET], [p1.x, p1.y])
-    p2.draw(screen, [p1.x, p1.y], [p2.x, p2.y])
+        p1.p1_motion_model(GRAVITY, p2)
+        p2.p2_motion_model(GRAVITY, p1)
 
-    p1.velocity += p1.acceleration
-    p2.velocity += p2.acceleration
-    p1.angle += p1.velocity
-    p2.angle += p2.velocity
+        # implement the update_y function
+        p1.x = p1.length * math.sin(p1.angle) + CENTER_WIDTH
+        p1.y = p1.length * math.cos(p1.angle) + Y_OFFSET
 
-    pygame.display.update()
+        p2.x = p1.x + p2.length * math.sin(p2.angle)
+        p2.y = p1.y + p2.length * math.cos(p2.angle)
 
-    clock.tick(60)
+        """
+        ===== DRAW SECTION ====
+        """
 
-pygame.quit()
+        p1.draw(screen, [CENTER_WIDTH, Y_OFFSET], [p1.x, p1.y])
+        p2.draw(screen, [p1.x, p1.y], [p2.x, p2.y])
+
+        p1.velocity += p1.acceleration
+        p2.velocity += p2.acceleration
+        p1.angle += p1.velocity
+        p2.angle += p2.velocity
+
+        pygame.display.update()
+
+        clock.tick(60)
+
+    pygame.quit()
+
+
+if __name__ == '__main__':
+    run_pendulum()
