@@ -1,99 +1,13 @@
-from __future__ import annotations
-from abc import ABC, abstractmethod
 import pygame
 import math
-
-PI = math.pi
-
-
-class Pendulum(ABC):
-
-    @abstractmethod
-    def __init__(self, rod_color: tuple, ball_color: tuple, length: float = 100, rod_mass: float = 10,
-                 ball_mass: float = 10, angle: float = PI):
-        self.length = length
-        self.rod_mass = rod_mass
-        self.ball_mass = ball_mass
-        self.mass = self.rod_mass + self.ball_mass
-        self._angle = angle
-        self.rod_color = rod_color
-        self.ball_color = ball_color
-        self._x = 0
-        self._y = 0
-        self._coords = self.get_coords
-        self._velocity = 0
-        self._acceleration = 0
-
-    @property
-    @abstractmethod
-    def x(self) -> float:
-        pass
-
-    @abstractmethod
-    def calculate_new_x(self) -> float:
-        pass
-
-    @property
-    @abstractmethod
-    def y(self) -> float:
-        pass
-
-    @abstractmethod
-    def calculate_new_y(self) -> float:
-        pass
-
-    @property
-    @abstractmethod
-    def get_coords(self) -> list:
-        pass
-
-    @property
-    @abstractmethod
-    def angle(self) -> float:
-        pass
-
-    @abstractmethod
-    def update_angle(self) -> float:
-        pass
-
-    @property
-    @abstractmethod
-    def acceleration(self) -> float:
-        pass
-
-    @property
-    @abstractmethod
-    def velocity(self) -> float:
-        pass
-
-    @abstractmethod
-    def update_velocity(self) -> float:
-        pass
-
-    @abstractmethod
-    def draw_rod(self, surface: pygame.display, origin: list, end: list):
-        pass
-
-    @abstractmethod
-    def draw_ball(self, surface: pygame.display, end: list):
-        pass
-
-    @abstractmethod
-    def draw(self, surface: pygame.display, origin: list, end: list):
-        pass
-
-    @abstractmethod
-    def p1_motion_model(self, ga: float, second_pendulum: Pendulum):
-        pass
-
-    @abstractmethod
-    def p2_motion_model(self, ga:float, first_pendulum: Pendulum):
-        pass
+from engine.core import Simulation
+from pendulums.pendulum import Pendulum
+from utils import MathematicalConstants, Colors, Screen
 
 
 class DoublePendulum(Pendulum):
     def __init__(self, rod_color: tuple, ball_color: tuple, length: float = 100, rod_mass: float = 10,
-                 ball_mass: float = 10, angle: float = PI):
+                 ball_mass: float = 10, angle: float = MathematicalConstants.PI):
         self.length = length
         self.rod_mass = rod_mass
         self.ball_mass = ball_mass
@@ -237,3 +151,55 @@ class DoublePendulum(Pendulum):
                        .format(property=pendulum_property, property_value=getattr(self, pendulum_property)))
 
         return data
+
+
+class DoublePendulumSimulation(Simulation):
+
+    def __init__(self, pendulum_1: DoublePendulum, pendulum_2: DoublePendulum, screen_size: tuple = (1000, 1000),
+                 name: str = 'Double Pendulum Simulation',
+                 font: str = 'Times New Roman', background: tuple = Colors.WHITE):
+        super().__init__(screen_size=screen_size, name=name, font=font, background=background)
+        self.p1 = pendulum_1
+        self.p2 = pendulum_2
+
+    def run(self):
+        done = False
+
+        while not done:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    done = True
+
+            self.set_background()
+
+            self.p1.p1_motion_model(MathematicalConstants.GRAVITY, self.p2)
+            self.p2.p2_motion_model(MathematicalConstants.GRAVITY, self.p1)
+
+            # implement the calculate_new_y function
+            self.p1.calculate_new_x(Screen.CENTER_WIDTH)
+            self.p1.calculate_new_y(Screen.Y_OFFSET)
+
+            self.p2.calculate_new_x(pendulum=self.p1)
+            self.p2.calculate_new_y(pendulum=self.p1)
+
+            self.p1.update_velocity()
+            self.p2.update_velocity()
+
+            self.p1.update_angle()
+            self.p2.update_angle()
+
+            """
+            ===== DRAW SECTION ====
+            """
+
+            display_text = self.font.render(self.p1.get_data('x'), False, (0, 0, 0))
+            self._screen.blit(display_text, (0, 0))
+
+            self.p1.draw(self._screen, [Screen.CENTER_WIDTH, Screen.Y_OFFSET], [self.p1.x, self.p1.y])
+            self.p2.draw(self._screen, [self.p1.x, self.p1.y], [self.p2.x, self.p2.y])
+
+            pygame.display.update()
+
+            self.clock.tick(60)
+
+        pygame.quit()
