@@ -4,6 +4,9 @@ from engine.core import Simulation
 from pendulums.pendulum import Pendulum
 from utils import MathematicalConstants, Colors, Screen
 
+# TODO maybe the motion simulation should be in the DoublePendulumSimulation and this class renamed and inherit from
+#   Pendulum. This naming would be more consistent and passing 2 pendulums (not doubles) to simulation makes more sense
+
 
 class DoublePendulum(Pendulum):
     def __init__(self, rod_color: tuple, ball_color: tuple, length: float = 100, rod_mass: float = 10,
@@ -155,12 +158,13 @@ class DoublePendulum(Pendulum):
 
 class DoublePendulumSimulation(Simulation):
 
-    def __init__(self, pendulum_1: DoublePendulum, pendulum_2: DoublePendulum, screen_size: tuple = (1000, 1000),
-                 name: str = 'Double Pendulum Simulation',
-                 font: str = 'Times New Roman', background: tuple = Colors.WHITE):
-        super().__init__(screen_size=screen_size, name=name, font=font, background=background)
+    def __init__(self, pendulum_1: DoublePendulum, pendulum_2: DoublePendulum, display_sim_data: bool = False,
+                 screen_size: tuple = (1000, 1000),
+                 name: str = 'Double Pendulum Simulation', background: tuple = Colors.WHITE):
+        super().__init__(screen_size=screen_size, name=name, background=background)
         self.p1 = pendulum_1
         self.p2 = pendulum_2
+        self.show_data = display_sim_data
 
     def run(self):
         done = False
@@ -191,9 +195,8 @@ class DoublePendulumSimulation(Simulation):
             """
             ===== DRAW SECTION ====
             """
-
-            display_text = self.font.render(self.p1.get_data('x'), False, (0, 0, 0))
-            self._screen.blit(display_text, (0, 0))
+            if self.show_data:
+                self.display_data(self.p1.get_data('x'))
 
             self.p1.draw(self._screen, [Screen.CENTER_WIDTH, Screen.Y_OFFSET], [self.p1.x, self.p1.y])
             self.p2.draw(self._screen, [self.p1.x, self.p1.y], [self.p2.x, self.p2.y])
