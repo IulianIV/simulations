@@ -1,14 +1,13 @@
 import pygame
 import math
-from engine.core import Simulation
-from pendulums.pendulum import Pendulum
-from utils import MathematicalConstants, Colors, Screen
+from engine.bodies.pendulum import BasicPendulum
+from utils import MathematicalConstants
 
 # TODO maybe the motion simulation should be in the DoublePendulumSimulation and this class renamed and inherit from
 #   Pendulum. This naming would be more consistent and passing 2 pendulums (not doubles) to simulation makes more sense
 
 
-class DoublePendulum(Pendulum):
+class Pendulum(BasicPendulum):
     def __init__(self, rod_color: tuple, ball_color: tuple, length: float = 100, rod_mass: float = 10,
                  ball_mass: float = 10, angle: float = MathematicalConstants.PI):
         self.length = length
@@ -32,7 +31,7 @@ class DoublePendulum(Pendulum):
     def x(self, new_x: float):
         self._x = new_x
 
-    def calculate_new_x(self, offset: int = None, pendulum: Pendulum = None):
+    def calculate_new_x(self, offset: int = None, pendulum: BasicPendulum = None):
         if pendulum is not None:
             self.x = pendulum.x + self.length * math.sin(self.angle)
         else:
@@ -48,7 +47,7 @@ class DoublePendulum(Pendulum):
     def y(self, new_y: float):
         self._y = new_y
 
-    def calculate_new_y(self, offset: int = None, pendulum: Pendulum = None) -> float:
+    def calculate_new_y(self, offset: int = None, pendulum: BasicPendulum = None) -> float:
         if pendulum is not None:
             self.y = pendulum.y + self.length * math.cos(self.angle)
         else:
@@ -65,15 +64,15 @@ class DoublePendulum(Pendulum):
     @property
     def angle(self) -> float:
         return self._angle
+   
+    @angle.setter
+    def angle(self, new_angle: float):
+        self._angle = new_angle
 
     def update_angle(self) -> float:
         self.angle += self.velocity
 
         return self.angle
-
-    @angle.setter
-    def angle(self, new_angle: float):
-        self._angle = new_angle
 
     @property
     def acceleration(self):
@@ -106,44 +105,7 @@ class DoublePendulum(Pendulum):
         self.draw_rod(surface, origin, end)
         self.draw_ball(surface, end)
 
-    def p1_motion_model(self, ga: float, second_pendulum: Pendulum):
-        """
-
-        :param ga: gravitational acceleration
-        :param second_pendulum: secondary pendulum
-        :return: motion model of first pendulum
-        """
-        equation_1: float = - ga * ((2 * self.mass) + second_pendulum.mass) * math.sin(self.angle)
-        equation_2: float = second_pendulum.mass * ga * math.sin(self.angle - (2 * second_pendulum.angle))
-        equation_3: float = 2 * math.sin(self.angle - second_pendulum.angle) * second_pendulum.mass
-        equation_4: float = (
-                (second_pendulum.velocity ** 2 * second_pendulum.length) +
-                (self.velocity ** 2 * self.length * math.cos(self.angle - second_pendulum.angle)))
-        denominator_1: float = self.length * (
-                (2 * self.mass) + second_pendulum.mass -
-                second_pendulum.mass * math.cos((2 * self.angle) - (2 * second_pendulum.angle)))
-
-        self.acceleration = (equation_1 - equation_2 - equation_3 * equation_4) / denominator_1
-
-        return self.acceleration
-
-    def p2_motion_model(self, ga: float, first_pendulum: Pendulum):
-        """
-        :param ga: gravitational acceleration
-        :param first_pendulum: first pendulum
-        :return: motion model of second pendulum
-        """
-        equation_1: float = 2 * math.sin(first_pendulum.angle - self.angle)
-        equation_2: float = (first_pendulum.velocity ** 2 * first_pendulum.length * (first_pendulum.mass + self.mass))
-        equation_3: float = ga * (first_pendulum.mass + self.mass) * math.cos(first_pendulum.angle)
-        equation_4: float = self.velocity ** 2 * self.length * self.mass * math.cos(first_pendulum.angle - self.angle)
-        denominator_2: float = self.length * (2 * first_pendulum.mass + self.mass - self.mass *
-                                              math.cos(2 * first_pendulum.angle - 2 * self.angle))
-
-        self.acceleration = (equation_1 * (equation_2 + equation_3 + equation_4)) / denominator_2
-
-        return self.acceleration
-
+    # TODO Improve this method to be more user friendly
     def get_data(self, pendulum_property):
         self_attributes = dir(self)
 
@@ -156,53 +118,87 @@ class DoublePendulum(Pendulum):
         return data
 
 
-class DoublePendulumSimulation(Simulation):
-
-    def __init__(self, pendulum_1: DoublePendulum, pendulum_2: DoublePendulum, display_sim_data: bool = False,
-                 screen_size: tuple = (1000, 1000),
-                 name: str = 'Double Pendulum Simulation', background: tuple = Colors.WHITE):
-        super().__init__(screen_size=screen_size, name=name, background=background)
+class DoublePendulum:
+    def __init__(self, pendulum_1: Pendulum, pendulum_2: Pendulum,
+                 gravity: float, origin=None):
+        if origin is None:
+            origin = [0, 0]
         self.p1 = pendulum_1
         self.p2 = pendulum_2
-        self.show_data = display_sim_data
+        self.ga = gravity
+        self.origin = origin
 
-    def run(self):
-        done = False
+    def __p1_x_y(self):
+        self.p1.calculate_new_x(self.origin[0])
+        self.p1.calculate_new_y(self.origin[1])
 
-        while not done:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    done = True
+    def __p2_x_y(self):
+        self.p2.calculate_new_x(pendulum=self.p1)
+        self.p2.calculate_new_y(pendulum=self.p1)
 
-            self.set_background()
+    def calculate_new_x_y(self):
+        self.__p1_x_y()
+        self.__p2_x_y()
 
-            self.p1.p1_motion_model(MathematicalConstants.GRAVITY, self.p2)
-            self.p2.p2_motion_model(MathematicalConstants.GRAVITY, self.p1)
+    def __update_velocity(self):
+        self.p1.update_velocity()
+        self.p2.update_velocity()
 
-            # implement the calculate_new_y function
-            self.p1.calculate_new_x(Screen.CENTER_WIDTH)
-            self.p1.calculate_new_y(Screen.Y_OFFSET)
+    def update_velocity(self):
+        self.__update_velocity()
 
-            self.p2.calculate_new_x(pendulum=self.p1)
-            self.p2.calculate_new_y(pendulum=self.p1)
+    def ___update_angle(self):
+        self.p1.update_angle()
+        self.p2.update_angle()
 
-            self.p1.update_velocity()
-            self.p2.update_velocity()
+    def update_angle(self):
+        self.___update_angle()
 
-            self.p1.update_angle()
-            self.p2.update_angle()
+    def __p1_motion_model(self):
+        equation_1: float = - self.ga * ((2 * self.p1.mass) + self.p2.mass) * math.sin(self.p1.angle)
+        equation_2: float = self.p2.mass * self.ga * math.sin(self.p1.angle - (2 * self.p2.angle))
+        equation_3: float = 2 * math.sin(self.p1.angle - self.p2.angle) * self.p2.mass
+        equation_4: float = (
+                (self.p2.velocity ** 2 * self.p2.length) +
+                (self.p1.velocity ** 2 * self.p1.length * math.cos(self.p1.angle - self.p2.angle)))
+        denominator_1: float = self.p1.length * (
+                (2 * self.p1.mass) + self.p2.mass -
+                self.p2.mass * math.cos((2 * self.p1.angle) - (2 * self.p2.angle)))
 
-            """
-            ===== DRAW SECTION ====
-            """
-            if self.show_data:
-                self.display_data(self.p1.get_data('x'))
+        self.p1.acceleration = (equation_1 - equation_2 - equation_3 * equation_4) / denominator_1
 
-            self.p1.draw(self._screen, [Screen.CENTER_WIDTH, Screen.Y_OFFSET], [self.p1.x, self.p1.y])
-            self.p2.draw(self._screen, [self.p1.x, self.p1.y], [self.p2.x, self.p2.y])
+        return self.p1.acceleration
 
-            pygame.display.update()
+    def __p2_motion_model(self):
+        equation_1: float = 2 * math.sin(self.p1.angle - self.p2.angle)
+        equation_2: float = (self.p1.velocity ** 2 * self.p1.length * (self.p1.mass + self.p2.mass))
+        equation_3: float = self.ga * (self.p1.mass + self.p2.mass) * math.cos(self.p1.angle)
+        equation_4: float = self.p2.velocity ** 2 * self.p2.length * self.p2.mass * math.cos(self.p1.angle - self.p2.angle)
+        denominator_2: float = self.p2.length * (2 * self.p1.mass + self.p2.mass - self.p2.mass *
+                                              math.cos(2 * self.p1.angle - 2 * self.p2.angle))
 
-            self.clock.tick(60)
+        self.p2.acceleration = (equation_1 * (equation_2 + equation_3 + equation_4)) / denominator_2
 
-        pygame.quit()
+        return self.p2.acceleration
+
+    def update_motion_model(self):
+        self.__p1_motion_model()
+        self.__p2_motion_model()
+
+    @staticmethod
+    def __draw_pendulum(pendulum: Pendulum, surface: pygame.display, origin: list, end: list):
+        pendulum.draw_rod(surface, origin, end)
+        pendulum.draw_ball(surface, end)
+
+    def draw(self, surface: pygame.display):
+        self.__draw_pendulum(self.p1, surface, self.origin, [self.p1.x, self.p1.y])
+        self.__draw_pendulum(self.p2, surface, [self.p1.x, self.p1.y], [self.p2.x, self.p2.y])
+
+    def run_simulation(self, screen: pygame.display):
+        self.update_motion_model()
+        self.calculate_new_x_y()
+        self.update_velocity()
+        self.update_angle()
+        self.draw(screen)
+
+

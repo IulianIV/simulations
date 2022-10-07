@@ -5,7 +5,7 @@ import pygame
 from utils import MathematicalConstants
 
 
-class Pendulum(ABC):
+class BasicPendulum(ABC):
 
     @abstractmethod
     def __init__(self, rod_color: tuple, ball_color: tuple, length: float = 100, rod_mass: float = 10,
@@ -17,15 +17,15 @@ class Pendulum(ABC):
         self._angle = angle
         self.rod_color = rod_color
         self.ball_color = ball_color
-        self._x = 0
-        self._y = 0
-        self._coords = self.get_coords
-        self._velocity = 0
-        self._acceleration = 0
 
     @property
     @abstractmethod
     def x(self) -> float:
+        pass
+
+    @x.setter
+    @abstractmethod
+    def x(self, new_x):
         pass
 
     @abstractmethod
@@ -35,6 +35,11 @@ class Pendulum(ABC):
     @property
     @abstractmethod
     def y(self) -> float:
+        pass
+
+    @y.setter
+    @abstractmethod
+    def y(self, new_y):
         pass
 
     @abstractmethod
@@ -51,6 +56,11 @@ class Pendulum(ABC):
     def angle(self) -> float:
         pass
 
+    @angle.setter
+    @abstractmethod
+    def angle(self, new_angle):
+        pass
+
     @abstractmethod
     def update_angle(self) -> float:
         pass
@@ -60,9 +70,19 @@ class Pendulum(ABC):
     def acceleration(self) -> float:
         pass
 
+    @acceleration.setter
+    @abstractmethod
+    def acceleration(self, new_acc):
+        pass
+
     @property
     @abstractmethod
     def velocity(self) -> float:
+        pass
+
+    @velocity.setter
+    @abstractmethod
+    def velocity(self, new_vel):
         pass
 
     @abstractmethod
@@ -82,10 +102,6 @@ class Pendulum(ABC):
         pass
 
     @abstractmethod
-    def p1_motion_model(self, ga: float, second_pendulum: Pendulum):
-        pass
-
-    @abstractmethod
-    def p2_motion_model(self, ga:float, first_pendulum: Pendulum):
+    def get_data(self, pendulum_property):
         pass
 
